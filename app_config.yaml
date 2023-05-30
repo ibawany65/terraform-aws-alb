@@ -1,0 +1,173 @@
+app_config:
+  app_name: bluewb 
+  app_name_short: blw
+  components:
+    cloud:
+      kms:
+        key_1:
+          is_multi_region: true
+          # additional_description: ""
+      security_groups:
+        security_group_1: 
+          additional_description: ""
+          rule_category: "appsrule"
+          ingress:
+            ingress_1:
+              description: "Allow SSH from anywhere in the VPC endpoint."
+              from_port:    22
+              to_port:      22
+              protocol:     6
+              cidr_blocks:  ["0.0.0.0/0"]
+          egress:
+            egress_1:
+              description: "Allow all to any destination."
+              from_port:   0
+              to_port:     0
+              protocol:    "-1"
+              cidr_blocks: ["0.0.0.0/0"]
+        security_group_2: 
+          additional_description: ""
+          rule_category: "appsrule"
+          ingress:
+            ingress_1:
+              description: "Allow Port 80 from anywhere in the VPC endpoint."
+              from_port:    80
+              to_port:      80
+              protocol:     6
+              cidr_blocks:  ["0.0.0.0/0"]
+            ingress_2:
+              description: "Allow Port 8080 from anywhere in the VPC endpoint."
+              from_port:    8080
+              to_port:      8080
+              protocol:     6
+              cidr_blocks:  ["0.0.0.0/0"]
+          egress:
+            egress_1:
+              description: "Allow all to any destination."
+              from_port:   0
+              to_port:     0
+              protocol:    "-1"
+              cidr_blocks: ["0.0.0.0/0"]
+      ec2:
+        iam_instance_profiles:
+          instance_profile_1:
+            name: "test_profile"
+        launch_templates:
+          launch_template_1:
+            name: "blueweb_template"
+            description: "EC2 Launch Template for BlueWeb."
+            instance_profile_name: instance_profile_1
+            instance_type: "t2.micro"
+            security_groups:
+              - security_group_1
+        auto_scaling_groups:
+          auto_scaling_group_1:
+            name: "blueweb_asg"
+            min_size: 1
+            max_size: 2
+            launch_template_name: launch_template_1
+            security_groups:
+              - security_group_1
+        auto_scaling_lifecycle_hooks:
+          lifecycle_hook_1:
+            name: "blueweb_lifecylce_hook_1"
+            auto_scaling_group_name: auto_scaling_group_1
+        auto_scaling_policies:
+          auto_scaling_policy_1:
+            enabled: false
+            name: "test_policy_1"
+            auto_scaling_group_name: auto_scaling_group_1
+        placement_groups:
+          placement_group_1:
+            name: "placement_group_01"
+            strategy: "cluster"
+        key_pairs:
+          key_pair_1:
+            key_name: "blueweb_key_2"
+            kms_key: key_1
+        instances:
+          instance_1:
+            instance_type: "t2.micro"
+            instance_profile_name: instance_profile_1
+            key_pair: key_pair_1
+            kms_key: key_1
+            security_groups:
+              - security_group_1
+            service_name: "App"
+          instance_2:
+            instance_type: "t2.micro"
+            instance_profile_name: instance_profile_1
+            key_pair: key_pair_1
+            kms_key: key_1
+            security_groups:
+              - security_group_1
+            service_name: "Web"
+        ebs_volumes:
+          volume_1:
+            availability_zone: instance_1
+            encrypted: false
+            iops: 100
+            size: 10
+            type: "gp2"
+        volume_attachments:
+          attachment_1:
+            device_name: "/dev/sdh"
+            instance: instance_1
+            volume: volume_1
+      rds:
+        clusters:
+          cluster_1:
+            encryption_key: key_1 
+            engine: "aurora-postgresql"
+            engine_version: "13.8"
+            security_groups: 
+              -  security_group_1
+            allocated_storage: 1
+            backup_retention_period: 7
+            parameters:
+              cluster_defaults: 
+                max_connections: 100
+
+              instance_defaults: 
+                max_connections: 50
+            instances:
+              instance_1:
+                parameters:
+                  max_connections: 50
+      route53:
+        record_settings: 
+          "ec2":
+            endpoint_type: ec2
+            record_ttl: 300
+          "rds":
+            endpoint_type: rds
+      acm:
+        acm_1:
+          private_key_file: "./resources/certs/privkey.pem"
+          certificate_body: "./resources/certs/blueweb.sbx.aws.fepoc.com.crt"
+          certificate_chain: "./resources/certs/root.cer"    
+      efs:
+        efs_1:
+          kms_key: key_1
+          encrypted: true
+          performance_mode: "generalPurpose"
+          provisioned_throughput_in_mibps: 
+          throughput_mode: "bursting"
+          lifecycle_policy:
+            transition_to_ia: "AFTER_30_DAYS"
+            transition_to_primary_storage_class: "AFTER_1_ACCESS"
+          attach_policy: true
+          bypass_policy_lockout_safety_check: false
+          enable_backup_policy: true
+          create_replication_configuration: false
+          mount_on: "/var/www/html"
+      alb:
+        alb_1:
+          domain_name: "blueweb.sbx.fepoc.com"
+          internal: true
+          load_balancer_type: "application"
+          security_groups: 
+            - security_group_2
+          instance:
+            - instance_1
+            - instance_2
